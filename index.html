@@ -92,7 +92,14 @@
 
     <script>
         const tg = window.Telegram.WebApp;
+        
+        // Проверка что мы в Telegram
+        if (!tg || !tg.initData) {
+            document.body.innerHTML = '<div style="padding: 50px; text-align: center;"><h2>Ошибка!</h2><p>Это приложение работает только в Telegram</p></div>';
+        }
+        
         tg.expand();
+        tg.ready();
 
         const products = [
             { id: 1, name: 'Футболка', price: 1500, emoji: '👕' },
@@ -105,7 +112,6 @@
 
         let cart = [];
 
-        // Настройка MainButton
         tg.MainButton.color = '#2481cc';
         tg.MainButton.textColor = '#ffffff';
 
@@ -131,7 +137,10 @@
             }
             
             updateCart();
-            tg.HapticFeedback.impactOccurred('light');
+            
+            if (tg.HapticFeedback) {
+                tg.HapticFeedback.impactOccurred('light');
+            }
         }
 
         function updateCart() {
@@ -149,15 +158,29 @@
             }
         }
 
-        // Обработчик главной кнопки
+        // ИСПРАВЛЕННЫЙ обработчик главной кнопки
         tg.MainButton.onClick(function() {
+            if (cart.length === 0) {
+                tg.showAlert('Корзина пуста');
+                return;
+            }
+            
             const total = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
             const data = {
                 cart: cart,
                 total: total
             };
             
-            tg.sendData(JSON.stringify(data));
+            console.log('Отправка данных в бот:', data);
+            
+            try {
+                const jsonString = JSON.stringify(data);
+                tg.sendData(jsonString);
+                console.log('✅ Данные отправлены!');
+            } catch (e) {
+                console.error('❌ Ошибка отправки:', e);
+                tg.showAlert('Ошибка: ' + e.message);
+            }
         });
 
         // Обработчик кнопки корзины
@@ -172,12 +195,14 @@
             ).join('\n');
             const total = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
 
-            tg.showAlert(`Ваша корзина:\n\n${items}\n\nИтого: ${total}₽\n\nИспользуйте синюю кнопку внизу`);
+            tg.showAlert(`Ваша корзина:\n\n${items}\n\nИтого: ${total}₽\n\nИспользуйте синюю кнопку внизу для оформления`);
         });
 
         // Инициализация
         renderProducts();
-        tg.ready();
+        tg.MainButton.hide();
+        
+        console.log('Web App загружен. Telegram WebApp version:', tg.version);
     </script>
 </body>
 </html>
